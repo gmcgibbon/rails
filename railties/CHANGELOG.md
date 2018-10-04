@@ -1,3 +1,8 @@
+*   Adds support for multiple databases to `rails db:migrate:status`.
+    Subtasks are also added to get the status of individual databases (eg. `rails db:migrate:status:animals`).
+
+    *Gannon McGibbon*
+
 *   Adds support for multiple databases to `rails db:rollback`.
     Subtasks are also added to rollback individual databases (eg. `rails db:rollback:animals`).
 

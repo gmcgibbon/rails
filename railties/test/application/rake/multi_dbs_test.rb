@@ -65,6 +65,16 @@ module ApplicationTests
         end
       end
 
+      def db_migrate_and_migrate_status
+        Dir.chdir(app_path) do
+          generate_models_for_animals
+          rails "db:migrate"
+          output = rails "db:migrate:status"
+          assert_match(/up     \d+  Create books/, output)
+          assert_match(/up     \d+  Create dogs/, output)
+        end
+      end
+
       def db_migrate_and_schema_dump_and_load(format)
         Dir.chdir(app_path) do
           generate_models_for_animals
@@ -100,6 +110,18 @@ module ApplicationTests
             assert_match(/CreateBooks: migrated/, output)
           else
             assert_match(/CreateDogs: migrated/, output)
+          end
+        end
+      end
+
+      def db_migrate_status_namespaced(namespace, expected_database)
+        Dir.chdir(app_path) do
+          generate_models_for_animals
+          output = rails("db:migrate:status:#{namespace}")
+          if namespace == "primary"
+            assert_match(/up     \d+  Create books/, output)
+          else
+            assert_match(/up     \d+  Create dogs/, output)
           end
         end
       end
@@ -178,6 +200,19 @@ module ApplicationTests
         require "#{app_path}/config/environment"
         ActiveRecord::Base.configurations.configs_for(env_name: Rails.env).each do |db_config|
           db_migrate_namespaced db_config.spec_name, db_config.config["database"]
+        end
+      end
+
+      test "db:migrate:status works on all databases" do
+        require "#{app_path}/config/environment"
+        db_migrate_and_migrate_status
+      end
+
+      test "db:migrate:status:namespace works" do
+        require "#{app_path}/config/environment"
+        ActiveRecord::Base.configurations.configs_for(env_name: Rails.env).each do |db_config|
+          db_migrate_namespaced db_config.spec_name, db_config.config["database"]
+          db_migrate_status_namespaced db_config.spec_name, db_config.config["database"]
         end
       end
 
