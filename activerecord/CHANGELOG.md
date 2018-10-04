@@ -1,3 +1,7 @@
+*   Move `db:migrate:status` code to `ActiveRecord::Tasks::DatabaseTasks.migrate_status`.
+
+    *Gannon McGibbon*
+
 *   Added `index` option for `change_table` migration helpers.
     With this change you can create indexes while adding new
     columns into the existing tables.
