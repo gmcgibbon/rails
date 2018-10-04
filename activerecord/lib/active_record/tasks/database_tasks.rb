@@ -197,6 +197,19 @@ module ActiveRecord
         Migration.verbose = verbose_was
       end
 
+      def rollback(step)
+        db_configs     = ActiveRecord::Base.configurations.configs_for(env_name: Rails.env)
+        version_groups = db_configs.group_by do |db_config|
+          ActiveRecord::Base.establish_connection(db_config.config)
+          ActiveRecord::Base.connection.migration_context.current_version
+        end
+        _, db_configs = version_groups.max
+        db_configs.each do |db_config|
+          ActiveRecord::Base.establish_connection(db_config.config)
+          ActiveRecord::Base.connection.migration_context.rollback(step)
+        end
+      end
+
       def check_target_version
         if target_version && !(Migration::MigrationFilenameRegexp.match?(ENV["VERSION"]) || /\A\d+\z/.match?(ENV["VERSION"]))
           raise "Invalid format of target version: `VERSION=#{ENV['VERSION']}`"
