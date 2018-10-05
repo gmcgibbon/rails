@@ -327,8 +327,10 @@ db_namespace = namespace :db do
 
       desc "Clears a db/schema_cache.yml file."
       task clear: :load_config do
-        filename = File.join(ActiveRecord::Tasks::DatabaseTasks.db_dir, "schema_cache.yml")
-        rm_f filename, verbose: false
+        ActiveRecord::Base.configurations.configs_for(env_name: Rails.env).each do |db_config|
+          filename = ActiveRecord::Tasks::DatabaseTasks.cache_dump_filename(db_config.spec_name)
+          rm_f filename, verbose: false
+        end
       end
     end
   end
