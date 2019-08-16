@@ -148,6 +148,18 @@ class ActiveStorage::Blob < ActiveStorage::Record
     def signed_id_verifier #:nodoc:
       @signed_id_verifier ||= ActiveStorage.verifier
     end
+
+    # Concatenate multiple blobs into one big blob.
+    def concat(filename:, blobs:, metadata: nil, content_type: nil, record: nil)
+      unless blobs.all?(&:persisted?)
+        raise(ActiveRecord::RecordNotSaved, "All blobs must be persisted.")
+      end
+      new(filename: filename, content_type: content_type, metadata: metadata, byte_size: blobs.sum(&:byte_size)).tap do |combined_blob|
+        service.concat(*blobs.pluck(:key), combined_blob.key)
+        combined_blob.checksum = ""
+        combined_blob.save!
+      end
+    end
   end
 
   # Returns a signed ID for this blob that's suitable for reference on the client-side without fear of tampering.
