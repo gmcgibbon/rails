@@ -107,6 +107,16 @@ module ActiveStorage
       { "Content-Type" => content_type, "Content-MD5" => checksum, "x-ms-blob-content-disposition" => content_disposition, "x-ms-blob-type" => "BlockBlob" }
     end
 
+    def compose(*source_keys, destination_key)
+      client.create_append_blob(container, destination_key).tap do |blob|
+        source_keys.each do |source_key|
+          download(source_key) do |chunk|
+            client.append_blob_block(container, destination_key, chunk)
+          end
+        end
+      end
+    end
+
     private
       def private_url(key, expires_in:, filename:, disposition:, content_type:, **)
         signer.signed_uri(

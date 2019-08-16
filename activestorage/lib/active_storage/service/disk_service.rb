@@ -102,6 +102,16 @@ module ActiveStorage
       File.join root, folder_for(key), key
     end
 
+    def compose(*source_keys, destination_key)
+      File.open(make_path_for(destination_key), "w") do |file|
+        source_keys.each do |source_key|
+          download(source_key) do |chunk|
+            file << chunk
+          end
+        end
+      end
+    end
+
     private
       def private_url(key, expires_in:, filename:, content_type:, disposition:, **)
         generate_url(key, expires_in: expires_in, filename: filename, content_type: content_type, disposition: disposition)

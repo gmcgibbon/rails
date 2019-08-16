@@ -90,6 +90,11 @@ module ActiveStorage
       ActiveStorage::Downloader.new(self).open(*args, **options, &block)
     end
 
+    # Concatenate multiple files into a single "composed" file.
+    def compose(*source_keys, destination_key)
+      raise NotImplementedError
+    end
+
     # Delete the file at the +key+.
     def delete(key)
       raise NotImplementedError

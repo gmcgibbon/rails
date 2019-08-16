@@ -98,6 +98,10 @@ module ActiveStorage
       { "Content-MD5" => checksum, "Content-Disposition" => content_disposition }
     end
 
+    def compose(*source_keys, destination_key)
+      bucket.compose(source_keys, destination_key)
+    end
+
     private
       def private_url(key, expires_in:, filename:, content_type:, disposition:, **)
         file_for(key).signed_url expires: expires_in, query: {

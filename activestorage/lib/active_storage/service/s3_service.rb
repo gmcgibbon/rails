@@ -95,6 +95,16 @@ module ActiveStorage
       { "Content-Type" => content_type, "Content-MD5" => checksum, "Content-Disposition" => content_disposition }
     end
 
+    def compose(*source_keys, destination_key)
+      object_for(destination_key).upload_stream do |stream|
+        source_keys.each do |source_key|
+          download(source_key) do |chunk|
+            stream << chunk
+          end
+        end
+      end
+    end
+
     private
       def private_url(key, expires_in:, filename:, disposition:, content_type:, **)
         object_for(key).presigned_url :get, expires_in: expires_in.to_i,
