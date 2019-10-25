@@ -32,7 +32,9 @@ module ActiveJob
       end
 
       ActiveSupport.on_load(:action_dispatch_integration_test) do
-        include ActiveJob::TestHelper
+        if config.active_job.queue_adapter == :async
+          include ActiveJob::TestHelper
+        end
       end
     end
 
