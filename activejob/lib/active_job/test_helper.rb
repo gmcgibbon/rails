@@ -34,6 +34,8 @@ module ActiveJob
     ActiveJob::Base.include(TestQueueAdapter)
 
     def before_setup # :nodoc:
+      @_test_queue_adapter_block_context = false
+
       test_adapter = queue_adapter_for_test
 
       queue_adapter_changed_jobs.each do |klass|
@@ -49,6 +51,13 @@ module ActiveJob
       super
 
       queue_adapter_changed_jobs.each { |klass| klass.disable_test_adapter }
+    end
+
+    def with_test_queue_adapter
+      @_test_queue_adapter_block_context = true
+      yield
+    ensure
+      @_test_queue_adapter_block_context = false
     end
 
     # Specifies the queue adapter to use with all Active Job test helpers.
@@ -118,6 +127,14 @@ module ActiveJob
     #     end
     #   end
     def assert_enqueued_jobs(number, only: nil, except: nil, queue: nil, &block)
+      unless @_test_queue_adapter_block_context
+        ActiveSupport::Deprecation.warn(<<~MSG.squish)
+          Using `assert_enqueued_jobs` outside of `with_test_queue_adapter`
+          is deprecated and will be removed in Rails 6.2. Wrap it inside of
+          a `with_test_queue_adapter` block instead.
+        MSG
+      end
+
       if block_given?
         original_count = enqueued_jobs_with(only: only, except: except, queue: queue)
 
@@ -270,6 +287,14 @@ module ActiveJob
     #       end
     #     end
     def assert_performed_jobs(number, only: nil, except: nil, queue: nil, &block)
+      unless @_test_queue_adapter_block_context
+        ActiveSupport::Deprecation.warn(<<~MSG.squish)
+          Using `assert_performed_jobs` outside of `with_test_queue_adapter`
+          is deprecated and will be removed in Rails 6.2. Wrap it inside of
+          a `with_test_queue_adapter` block instead.
+        MSG
+      end
+
       if block_given?
         original_count = performed_jobs.size
 
@@ -380,6 +405,14 @@ module ActiveJob
     #     end
     #   end
     def assert_enqueued_with(job: nil, args: nil, at: nil, queue: nil, &block)
+      unless @_test_queue_adapter_block_context
+        ActiveSupport::Deprecation.warn(<<~MSG.squish)
+          Using `assert_enqueued_with` outside of `with_test_queue_adapter`
+          is deprecated and will be removed in Rails 6.2. Wrap it inside of
+          a `with_test_queue_adapter` block instead.
+        MSG
+      end
+
       expected = { job: job, args: args, at: at, queue: queue }.compact
       expected_args = prepare_args_for_assertion(expected)
       potential_matches = []
@@ -459,6 +492,14 @@ module ActiveJob
     #     end
     #   end
     def assert_performed_with(job: nil, args: nil, at: nil, queue: nil, &block)
+      unless @_test_queue_adapter_block_context
+        ActiveSupport::Deprecation.warn(<<~MSG.squish)
+          Using `assert_performed_with` outside of `with_test_queue_adapter`
+          is deprecated and will be removed in Rails 6.2. Wrap it inside of
+          a `with_test_queue_adapter` block instead.
+        MSG
+      end
+
       expected = { job: job, args: args, at: at, queue: queue }.compact
       expected_args = prepare_args_for_assertion(expected)
       potential_matches = []
@@ -551,7 +592,17 @@ module ActiveJob
     # If the +:at+ option is specified, then only run jobs enqueued to run
     # immediately or before the given time
     def perform_enqueued_jobs(only: nil, except: nil, queue: nil, at: nil, &block)
-      return flush_enqueued_jobs(only: only, except: except, queue: queue, at: at) unless block_given?
+      unless @_test_queue_adapter_block_context
+        ActiveSupport::Deprecation.warn(<<~MSG.squish)
+          Using `perform_enqueued_jobs` outside of `with_test_queue_adapter`
+          is deprecated and will be removed in Rails 6.2. Wrap it inside of
+          a `with_test_queue_adapter` block instead.
+        MSG
+      end
+
+      unless block_given?
+        return flush_enqueued_jobs(only: only, except: except, queue: queue, at: at)
+      end
 
       validate_option(only: only, except: except)
 
