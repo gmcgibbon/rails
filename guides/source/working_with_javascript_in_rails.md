@@ -43,8 +43,9 @@ As an example, here's some JavaScript code that makes an Ajax request:
 fetch("/test")
   .then((data) => data.text())
   .then((html) => {
-    document.querySelector("#results").insertAdjacentHTML("beforeend", data);
-  })
+    const results = document.querySelector("#results");
+    results.insertAdjacentHTML("beforeend", data);
+  });
 ```
 
 This code fetches data from "/test", and then appends the result to the `div`
@@ -67,23 +68,24 @@ Here's the simplest way to write JavaScript. You may see it referred to as
 'inline JavaScript':
 
 ```html
-<a href="#" onclick="event.preventDefault();this.style.backgroundColor='#990000'">Paint it red</a>
+<a href="#" onclick="this.style.backgroundColor='#990000'">Paint it red</a>
 ```
 When clicked, the link background will become red. Here's the problem: what
 happens when we have lots of JavaScript we want to execute on a click?
 
 ```html
-<a href="#" onclick="event.preventDefault();this.style.backgroundColor='#009900';this.style.color='#FFFFFF';">Paint it green</a>
+<a href="#" onclick="this.style.backgroundColor='#009900';this.style.color='#FFFFFF';event.preventDefault();">Paint it green</a>
 ```
 
 Awkward, right? We could pull the function definition out of the click handler,
 and turn it a function:
 
 ```js
-window.paintIt = function(element, backgroundColor, textColor) {
-  element.style.backgroundColor = backgroundColor;
+window.paintIt = function(event, backgroundColor, textColor) {
+  event.preventDefault();
+  event.target.style.backgroundColor = backgroundColor;
   if (textColor) {
-    element.style.color = textColor;
+    event.target.style.color = textColor;
   }
 }
 ```
@@ -91,16 +93,16 @@ window.paintIt = function(element, backgroundColor, textColor) {
 And then on our page:
 
 ```html
-<a href="#" onclick="event.preventDefault();paintIt(this, '#990000')">Paint it red</a>
+<a href="#" onclick="paintIt(event, '#990000')">Paint it red</a>
 ```
 
 That's a little bit better, but what about multiple links that have the same
 effect?
 
 ```html
-<a href="#" onclick="event.preventDefault();paintIt(this, '#990000')">Paint it red</a>
-<a href="#" onclick="event.preventDefault();paintIt(this, '#009900', '#FFFFFF')">Paint it green</a>
-<a href="#" onclick="event.preventDefault();paintIt(this, '#000099', '#FFFFFF')">Paint it blue</a>
+<a href="#" onclick="paintIt(event, '#990000')">Paint it red</a>
+<a href="#" onclick="paintIt(event, '#009900', '#FFFFFF')">Paint it green</a>
+<a href="#" onclick="paintIt(event, '#000099', '#FFFFFF')">Paint it blue</a>
 ```
 
 Not very DRY, eh? We can fix this by using events instead. We'll add a `data-*`
@@ -116,7 +118,10 @@ function paintIt(element, backgroundColor, textColor) {
 }
 
 window.addEventListener("load", () => {
-  document.querySelectorAll("a[data-background-color]").forEach((element) => {
+  const links = document.querySelectorAll(
+    "a[data-background-color]"
+  );
+  links.forEach((element) => {
     element.addEventListener("click", (event) => {
       event.preventDefault();
 
@@ -232,7 +237,8 @@ and write some JavaScript like this:
 
 ```js
 window.addEventListener("load", () => {
-  document.querySelectorAll("a[data-remote]").forEach((element) => {
+  const links = document.querySelectorAll("a[data-remote]");
+  links.forEach((element) => {
     element.addEventListener("ajax:success", () => {
       alert("The article was deleted.");
     });
@@ -478,8 +484,11 @@ respond to your Ajax request. You then have a corresponding
 code that will be sent and executed on the client side.
 
 ```js
-document.querySelector("#users").insertAdjacentHTML("beforeend","<%= j render @user %>");
+const users = document.querySelector("#users");
+users.insertAdjacentHTML("beforeend","<%= j render @user %>");
 ```
+
+NOTE: Don't forget to add [Erb support to webpacker](https://github.com/rails/webpacker#erb) if you want to use ES6 syntax here.
 
 Turbolinks
 ----------
@@ -537,7 +546,9 @@ the security token as a default header for Ajax calls in your library. To get
 the token:
 
 ```js
-const token = document.getElementsByName("csrf-token")[0].content;
+const token = document.getElementsByName(
+  "csrf-token"
+)[0].content;
 ```
 
 You can then submit this token as a `X-CSRF-Token` header for your
