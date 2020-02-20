@@ -484,11 +484,11 @@ respond to your Ajax request. You then have a corresponding
 code that will be sent and executed on the client side.
 
 ```js
-const users = document.querySelector("#users");
-users.insertAdjacentHTML("beforeend","<%= j render @user %>");
+var users = document.querySelector("#users");
+users.insertAdjacentHTML("beforeend", "<%= j render(@user) %>");
 ```
 
-NOTE: Don't forget to add [Erb support to webpacker](https://github.com/rails/webpacker#erb) if you want to use ES6 syntax here.
+NOTE: JavaScript view rendering doesn't do any preprocessing, so you shouldn't use ES6 syntax here.
 
 Turbolinks
 ----------
