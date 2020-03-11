@@ -16,6 +16,14 @@ module Rails
       c.system_tests :test_unit
     end
 
+    initializer "test_unit.root" do
+      if defined?(ENGINE_ROOT)
+        Rails::TestUnit::Reporter.root = ENGINE_ROOT
+      elsif Rails.respond_to?(:root)
+        Rails::TestUnit::Reporter.root = Rails.root
+      end
+    end
+
     initializer "test_unit.line_filtering" do
       ActiveSupport.on_load(:active_support_test_case) {
         ActiveSupport::TestCase.extend Rails::LineFiltering

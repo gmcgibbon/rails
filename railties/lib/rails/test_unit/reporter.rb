@@ -6,6 +6,7 @@ require "minitest"
 module Rails
   class TestUnitReporter < Minitest::StatisticsReporter
     class_attribute :executable, default: "rails test"
+    class_attribute :root
 
     def record(result)
       super
@@ -51,7 +52,7 @@ module Rails
     end
 
     def relative_path_for(file)
-      file.sub(/^#{app_root}\/?/, "")
+      file.sub(/^#{root}\/?/, "")
     end
 
     private
@@ -76,15 +77,6 @@ module Rails
         end
 
         "#{executable} #{relative_path_for(location)}:#{line}"
-      end
-
-      def app_root
-        @app_root ||=
-          if defined?(ENGINE_ROOT)
-            ENGINE_ROOT
-          elsif Rails.respond_to?(:root)
-            Rails.root
-          end
       end
 
       def colored_output?
