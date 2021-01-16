@@ -209,6 +209,10 @@ module Rails
             active_support.hash_digest_class = OpenSSL::Digest::SHA256
             active_support.key_generator_hash_digest_class = OpenSSL::Digest::SHA256
           end
+
+          if respond_to?(:action_controller)
+            action_controller.raise_on_open_redirects = true
+          end
         else
           raise "Unknown version #{target_version.to_s.inspect}"
         end
