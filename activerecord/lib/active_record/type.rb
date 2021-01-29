@@ -47,8 +47,7 @@ module ActiveRecord
       end
 
       def adapter_name_from(model) # :nodoc:
-        # TODO: this shouldn't depend on a connection to the database
-        model.connection.adapter_name.downcase.to_sym
+        model.connection_adapter_class::ADAPTER_NAME.downcase.to_sym
       end
 
       private

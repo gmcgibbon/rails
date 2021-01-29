@@ -8,6 +8,10 @@ require "mysql2"
 
 module ActiveRecord
   module ConnectionHandling # :nodoc:
+    def mysql2_connection_adapter_class
+      ConnectionAdapters::Mysql2Adapter
+    end
+
     # Establishes a connection to the database that's used by all Active Record objects.
     def mysql2_connection(config)
       config = config.symbolize_keys
@@ -19,7 +23,7 @@ module ActiveRecord
         config[:flags] |= Mysql2::Client::FOUND_ROWS
       end
 
-      ConnectionAdapters::Mysql2Adapter.new(
+      mysql2_connection_adapter_class.new(
         ConnectionAdapters::Mysql2Adapter.new_client(config),
         logger,
         nil,

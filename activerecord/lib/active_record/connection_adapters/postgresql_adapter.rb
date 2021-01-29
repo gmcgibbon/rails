@@ -21,6 +21,10 @@ require "active_record/connection_adapters/postgresql/utils"
 
 module ActiveRecord
   module ConnectionHandling # :nodoc:
+    def postgresql_connection_adapter_class
+      ConnectionAdapters::PostgreSQLAdapter
+    end
+
     # Establishes a connection to the database that's used by all Active Record objects
     def postgresql_connection(config)
       conn_params = config.symbolize_keys.compact
@@ -33,7 +37,7 @@ module ActiveRecord
       valid_conn_param_keys = PG::Connection.conndefaults_hash.keys + [:requiressl]
       conn_params.slice!(*valid_conn_param_keys)
 
-      ConnectionAdapters::PostgreSQLAdapter.new(
+      postgresql_connection_adapter_class.new(
         ConnectionAdapters::PostgreSQLAdapter.new_client(conn_params),
         logger,
         conn_params,
