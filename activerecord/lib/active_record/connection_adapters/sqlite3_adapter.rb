@@ -15,6 +15,10 @@ require "sqlite3"
 
 module ActiveRecord
   module ConnectionHandling # :nodoc:
+    def sqlite3_connection_adapter_class
+      ConnectionAdapters::SQLite3Adapter
+    end
+
     def sqlite3_connection(config)
       config = config.symbolize_keys
 
@@ -37,7 +41,7 @@ module ActiveRecord
         config.merge(results_as_hash: true)
       )
 
-      ConnectionAdapters::SQLite3Adapter.new(db, logger, nil, config)
+      sqlite3_connection_class.new(db, logger, nil, config)
     rescue Errno::ENOENT => error
       if error.message.include?("No such file or directory")
         raise ActiveRecord::NoDatabaseError
