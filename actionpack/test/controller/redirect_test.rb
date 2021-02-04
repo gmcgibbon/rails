@@ -84,10 +84,6 @@ class RedirectController < ActionController::Base
     redirect_to "http://www.rubyonrails.org/"
   end
 
-  def unsafe_redirect_with_fallback
-    redirect_to "http://www.rubyonrails.org/", fallback_location: "/things/stuff"
-  end
-
   def unsafe_redirect_back
     redirect_back_or_to "http://www.rubyonrails.org/"
   end
@@ -443,13 +439,8 @@ class RedirectTest < ActionController::TestCase
 
       assert_equal(<<~MSG.squish, error.message)
         Unsafe redirect \"http://www.rubyonrails.org/\",
-        use :fallback_location to specify a fallback or
-        :allow_other_host to redirect anyway.
+        use :allow_other_host to redirect anyway.
       MSG
-
-      get :unsafe_redirect_with_fallback
-
-      assert_redirected_to "/things/stuff"
     end
   end
 
@@ -461,8 +452,7 @@ class RedirectTest < ActionController::TestCase
 
       assert_equal(<<~MSG.squish, error.message)
         Unsafe redirect \"http://www.rubyonrails.org/\",
-        use :fallback_location to specify a fallback or
-        :allow_other_host to redirect anyway.
+        use :allow_other_host to redirect anyway.
       MSG
     end
   end

@@ -64,10 +64,10 @@ module ActionController
     # Passing user input directly into +redirect_to+ is considered dangerous (eg. `redirect_to(params[:location])`).
     # Always use regular expressions or a permitted list when redirecting to a user specified location.
     def redirect_to(options = {}, response_options = {})
+      response_options[:allow_other_host] ||= _allow_other_host unless response_options.key?(:allow_other_host)
+
       raise ActionControllerError.new("Cannot redirect to nil!") unless options
       raise AbstractController::DoubleRenderError if response_body
-
-      response_options[:allow_other_host] ||= _allow_open_redirects unless response_options.key?(:allow_other_host)
 
       self.status        = _extract_redirect_to_status(options, response_options)
       self.location      = _compute_safe_redirect_to_location(request, options, response_options)
@@ -76,7 +76,7 @@ module ActionController
 
     # Soft deprecated alias for <tt>redirect_back_or_to</tt> where the fallback_location location is supplied as a keyword argument instead
     # of the first positional argument.
-    def redirect_back(fallback_location:, allow_other_host: _allow_open_redirects, **args)
+    def redirect_back(fallback_location:, allow_other_host: _allow_other_host, **args)
       redirect_back_or_to fallback_location, allow_other_host: allow_other_host, **args
     end
 
@@ -102,20 +102,24 @@ module ActionController
     #
     # All other options that can be passed to #redirect_to are accepted as
     # options and the behavior is identical.
-    def redirect_back_or_to(fallback_location, allow_other_host: _allow_open_redirects, **options)
-      referer = request.referer || fallback_location
-      fallback_location = _allow_open_redirects ? fallback_location : nil
+    def redirect_back_or_to(fallback_location, allow_other_host: _allow_other_host, **options)
+      location = request.referer || fallback_location
+      location = fallback_location unless allow_other_host || _url_host_allowed?(request.referer)
+      allow_other_host = true if _allow_other_host && !allow_other_host # if the fallback is an open redirect
 
-      redirect_to referer, fallback_location: fallback_location, allow_other_host: allow_other_host, **options
+      redirect_to location, allow_other_host: allow_other_host, **options
     end
 
     def _compute_safe_redirect_to_location(request, options, response_options)
       location = _compute_redirect_to_location(request, options)
+
       if response_options[:allow_other_host] || _url_host_allowed?(location)
         location
       else
-        fallback_location = response_options[:fallback_location] || _raise_open_redirect(location)
-        _compute_redirect_to_location(request, fallback_location)
+        raise(ArgumentError, <<~MSG.squish)
+          Unsafe redirect #{location.truncate(100).inspect},
+          use :allow_other_host to redirect anyway.
+        MSG
       end
     end
 
@@ -140,15 +144,7 @@ module ActionController
     public :_compute_redirect_to_location
 
     private
-      def _raise_open_redirect(location)
-        raise(ArgumentError, <<~MSG.squish)
-          Unsafe redirect #{location.truncate(100).inspect},
-          use :fallback_location to specify a fallback
-          or :allow_other_host to redirect anyway.
-        MSG
-      end
-
-      def _allow_open_redirects
+      def _allow_other_host
         !raise_on_open_redirects
       end
 
