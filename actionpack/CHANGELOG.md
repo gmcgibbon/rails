@@ -1,3 +1,11 @@
+*   Raise when an invalid action name is defined on a controller.
+
+    Some actions names may accidentally override Action Controller
+    internals. Instead of allowing the definition, we can add a definition
+    time `method_added?` hook to prevent unintended overrides.
+
+    *Gannon McGibbon*, *Chris Salzberg*
+
 *   `ActionDispatch::Request#content_type` now returned Content-Type header as it is.
 
     Previously, `ActionDispatch::Request#content_type` returned value does NOT contain charset part.

@@ -328,6 +328,8 @@ module RoutingTestHelpers
         block = @block
         Class.new(@strict ? super : ActionController::Base) {
           include helpers
+
+          protected
           define_method(:process) { |name| block.call(self) }
           def to_a; [200, {}, []]; end
         }

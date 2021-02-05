@@ -76,6 +76,19 @@ module AbstractController
         unless klass.instance_variable_defined?(:@abstract)
           klass.instance_variable_set(:@abstract, false)
         end
+
+        unless %(ActionController::API ActionController::Metal).include?(klass.name.to_s)
+          klass.define_singleton_method(:method_added) do |name|
+            super(name)
+
+            invalid_method_names = Base.instance_methods(true) - Kernel.instance_methods(true)
+
+            if public_instance_methods.include?(name) && invalid_method_names.include?(name)
+              raise(ArgumentError, "Can't add #{name} to #{self.name}, it is not a valid action name.")
+            end
+          end
+        end
+
         super
       end
 

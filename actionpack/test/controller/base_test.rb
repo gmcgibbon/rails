@@ -127,6 +127,23 @@ class ControllerInstanceTests < ActiveSupport::TestCase
     assert_equal "examples", controller.controller_path
   end
 
+  def test_invalid_action_name
+    error = assert_raise(ArgumentError) do
+      Class.new(ActionController::Base) do
+        def self.name
+          "SomeController"
+        end
+
+        def config
+        end
+      end
+    end
+
+    assert_equal <<~MSG.squish, error.message
+      Can't add config to SomeController, it is not a valid action name.
+    MSG
+  end
+
   def test_response_has_default_headers
     original_default_headers = ActionDispatch::Response.default_headers
 
