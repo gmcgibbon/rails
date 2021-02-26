@@ -1,3 +1,7 @@
+*   Fix `has_many` inversing recursion on models with recursive associations.
+
+    *Gannon McGibbon*
+
 *   Fixtures for `has_many :through` associations now load timestamps on join tables
 
     Given this fixture:

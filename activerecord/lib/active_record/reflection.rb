@@ -234,6 +234,9 @@ module ActiveRecord
           if has_inverse? && inverse_of.nil?
             raise InverseOfAssociationNotFoundError.new(self)
           end
+          if has_inverse? && inverse_of == self
+            raise ArgumentError, "Recursive association #{name}."
+          end
         end
       end
 
@@ -624,6 +627,7 @@ module ActiveRecord
         # with the current reflection's klass name.
         def valid_inverse_reflection?(reflection)
           reflection &&
+            reflection != self &&
             foreign_key == reflection.foreign_key &&
             klass <= reflection.active_record &&
             can_find_inverse_of_automatically?(reflection)

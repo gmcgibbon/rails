@@ -22,6 +22,7 @@ require "models/project"
 require "models/author"
 require "models/user"
 require "models/room"
+require "models/branch"
 
 class AutomaticInverseFindingTests < ActiveRecord::TestCase
   fixtures :ratings, :comments, :cars
@@ -717,6 +718,31 @@ class InverseBelongsToTests < ActiveRecord::TestCase
     with_has_many_inversing do
       human = interests(:trainspotting).human_with_callbacks
       assert_not_predicate human, :add_callback_called?
+    end
+  end
+
+
+  def test_recursive_model_has_many_inversing
+    with_has_many_inversing do
+      main = Branch.create!
+      feature = main.branches.create!
+      topic = feature.branches.build
+
+      assert_equal(main, topic.branch.branch)
+    end
+  end
+
+  def test_recursive_inverse_on_recursice_model_has_many_inversing
+    with_has_many_inversing do
+      main = BrokenBranch.create!
+      feature = main.branches.create!
+      topic = feature.branches.build
+
+      error = assert_raises(ArgumentError) do
+        topic.branch.branch
+      end
+
+      assert_equal("Recursive association branch.", error.message)
     end
   end
 
