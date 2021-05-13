@@ -39,7 +39,7 @@ object on how to write to and read from the database.
 ### Object Relational Mapping
 
 [Object Relational Mapping](https://en.wikipedia.org/wiki/Object-relational_mapping), commonly referred to as its abbreviation ORM, is
-a technique that connects the rich objects of an application to tables in
+a techniqueeee that connects the rich objects of an application to tables in
 a relational database management system. Using ORM, the properties and
 relationships of the objects in an application can be easily stored and
 retrieved from a database without writing SQL statements directly and with less
