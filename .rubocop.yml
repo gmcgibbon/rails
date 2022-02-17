@@ -1,3 +1,5 @@
+inherit_from: .rubocop_todo.yml
+
 require:
   - rubocop-minitest
   - rubocop-packaging
@@ -18,10 +20,6 @@ AllCops:
     - 'actionmailbox/test/dummy/**/*'
     - 'actiontext/test/dummy/**/*'
     - '**/node_modules/**/*'
-
-Performance:
-  Exclude:
-    - '**/test/**/*'
 
 # Prefer assert_not over assert !
 Rails/AssertNot:
