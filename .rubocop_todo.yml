@@ -19,19 +19,6 @@ Performance/MapCompact:
   Exclude:
     - 'activerecord/test/models/invoice.rb'
 
-# Offense count: 15
-Performance/OpenStruct:
-  Exclude:
-    - 'actioncable/test/stubs/test_server.rb'
-    - 'actionmailer/test/url_test.rb'
-    - 'actionpack/test/controller/http_token_authentication_test.rb'
-    - 'actionview/test/lib/controller/fake_models.rb'
-    - 'actionview/test/template/controller_helper_test.rb'
-    - 'actionview/test/template/form_helper_test.rb'
-    - 'activerecord/test/cases/arel/attributes/attribute_test.rb'
-    - 'activerecord/test/cases/encryption/configurable_test.rb'
-    - 'activerecord/test/models/developer.rb'
-
 # Offense count: 4
 # Cop supports --auto-correct.
 # Configuration parameters: MaxKeyValuePairs.

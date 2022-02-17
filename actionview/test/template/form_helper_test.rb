@@ -143,6 +143,7 @@ class FormHelperTest < ActionView::TestCase
     @controller.singleton_class.include Routes.url_helpers
   end
 
+  Person = Struct.new(:name, keyword_init: true)
   RecordForm = Struct.new(:to_model, keyword_init: true)
   Routes = ActionDispatch::Routing::RouteSet.new
   Routes.draw do
@@ -275,7 +276,7 @@ class FormHelperTest < ActionView::TestCase
   end
 
   def test_label_with_non_active_record_object
-    form_for(OpenStruct.new(name: "ok"), as: "person", url: "/an", html: { id: "create-person" }) do |f|
+    form_for(Person.new(name: "ok"), as: "person", url: "/an", html: { id: "create-person" }) do |f|
       f.label(:name)
     end
 

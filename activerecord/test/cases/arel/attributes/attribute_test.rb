@@ -1,11 +1,12 @@
 # frozen_string_literal: true
 
 require_relative "../helper"
-require "ostruct"
 
 module Arel
   module Attributes
     class AttributeTest < Arel::Spec
+      QuoteRange = Struct.new(:begin, :end, :exclude_end?, keyword_init: true)
+
       describe "#not_eq" do
         it "should create a NotEqual node" do
           relation = Table.new(:users)
@@ -1141,7 +1142,7 @@ module Arel
 
       private
         def quoted_range(begin_val, end_val, exclude)
-          OpenStruct.new(
+          QuoteRange.new(
             begin: Nodes::Quoted.new(begin_val),
             end: Nodes::Quoted.new(end_val),
             exclude_end?: exclude,

@@ -40,8 +40,10 @@ end
 
 class ActionMailerUrlTest < ActionMailer::TestCase
   class DummyModel
+    Name = Struct.new(:route_key, :name, keyword_init: true)
+
     def self.model_name
-      OpenStruct.new(route_key: "dummy_model")
+      Name.new(route_key: "dummy_model")
     end
 
     def persisted?

@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "ostruct"
-
 class Developer < ActiveRecord::Base
   module TimestampAliases
     extend ActiveSupport::Concern
@@ -208,8 +206,10 @@ class LazyBlockDeveloperCalledDavid < ActiveRecord::Base
 end
 
 class CallableDeveloperCalledDavid < ActiveRecord::Base
+  CallableScope = Struct.new(:call, keyword_init: true)
+
   self.table_name = "developers"
-  default_scope OpenStruct.new(call: where(name: "David"))
+  default_scope CallableScope.new(call: where(name: "David"))
 end
 
 class ClassMethodDeveloperCalledDavid < ActiveRecord::Base
@@ -309,10 +309,12 @@ class EagerDeveloperWithBlockDefaultScope < ActiveRecord::Base
 end
 
 class EagerDeveloperWithCallableDefaultScope < ActiveRecord::Base
+  CallableScope = Struct.new(:call, keyword_init: true)
+
   self.table_name = "developers"
   has_and_belongs_to_many :projects, -> { order("projects.id") }, foreign_key: "developer_id", join_table: "developers_projects"
 
-  default_scope OpenStruct.new(call: includes(:projects))
+  default_scope CallableScope.new(call: includes(:projects))
 end
 
 class ThreadsafeDeveloper < ActiveRecord::Base

@@ -1,17 +1,24 @@
 # frozen_string_literal: true
 
-require "ostruct"
-
 class TestServer
   include ActionCable::Server::Connections
   include ActionCable::Server::Broadcasting
+
+  Config = Struct.new(
+    :log_tags,
+    :subscription_adapter,
+    :allowed_request_origins,
+    :disable_request_forgery_protection,
+    :allow_same_origin_as_host,
+    keyword_init: true
+  )
 
   attr_reader :logger, :config, :mutex
 
   def initialize(subscription_adapter: SuccessAdapter)
     @logger = ActiveSupport::TaggedLogging.new ActiveSupport::Logger.new(StringIO.new)
 
-    @config = OpenStruct.new(log_tags: [], subscription_adapter: subscription_adapter)
+    @config = Config.new(log_tags: [], subscription_adapter: subscription_adapter)
 
     @mutex = Monitor.new
   end

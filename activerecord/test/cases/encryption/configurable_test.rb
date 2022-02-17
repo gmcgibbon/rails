@@ -5,6 +5,16 @@ require "models/pirate"
 require "models/book"
 
 class ActiveRecord::Encryption::ConfigurableTest < ActiveRecord::EncryptionTestCase
+  class MockApp
+    Config = Struct.new(:filter_parameters, keyword_init: true)
+
+    attr_reader(:config)
+
+    def initialize(config:)
+      @config = Config.new(**config.to_h)
+    end
+  end
+
   test "can access context properties with top level getters" do
     assert_equal ActiveRecord::Encryption.key_provider, ActiveRecord::Encryption.context.key_provider
   end
@@ -42,7 +52,7 @@ class ActiveRecord::Encryption::ConfigurableTest < ActiveRecord::EncryptionTestC
   end
 
   test "install autofiltered params" do
-    application = OpenStruct.new(config: OpenStruct.new(filter_parameters: []))
+    application = MockApp.new(config: { filter_parameters: [] })
     ActiveRecord::Encryption.install_auto_filtered_parameters_hook(application)
 
     Class.new(Pirate) do
@@ -56,7 +66,7 @@ class ActiveRecord::Encryption::ConfigurableTest < ActiveRecord::EncryptionTestC
   test "exclude the installation of autofiltered params" do
     ActiveRecord::Encryption.config.excluded_from_filter_parameters = [:catchphrase]
 
-    application = OpenStruct.new(config: OpenStruct.new(filter_parameters: []))
+    application = MockApp.new(config: { filter_parameters: [] })
     ActiveRecord::Encryption.install_auto_filtered_parameters_hook(application)
 
     Class.new(Pirate) do

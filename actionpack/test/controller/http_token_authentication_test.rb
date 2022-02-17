@@ -42,6 +42,7 @@ class HttpTokenAuthenticationTest < ActionController::TestCase
       end
   end
 
+  MockRequest = Struct.new(:authorization, keyword_init: true)
   AUTH_HEADERS = ["HTTP_AUTHORIZATION", "X-HTTP_AUTHORIZATION", "X_HTTP_AUTHORIZATION", "REDIRECT_X_HTTP_AUTHORIZATION"]
 
   tests DummyController
@@ -229,7 +230,7 @@ class HttpTokenAuthenticationTest < ActionController::TestCase
     end
 
     def mock_authorization_request(authorization)
-      OpenStruct.new(authorization: authorization)
+      MockRequest.new(authorization: authorization)
     end
 
     def encode_credentials(token, options = {})
