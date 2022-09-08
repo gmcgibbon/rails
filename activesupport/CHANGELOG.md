@@ -1,3 +1,15 @@
+*   Add italic and underline support to `ActiveSupport::LogSubscriber#color`
+
+    Previously, only bold text was supported via a positional argument.
+    This allows for bold, italic, and underline options to be specified
+    for colored logs.
+
+    ```ruby
+    info color("Hello world!", :red, bold: true, underline: true)
+    ```
+
+    *Gannon McGibbon*
+
 *   Add `skip_nil:` support to `ActiveSupport::Cache::Store#fetch_multi`.
 
     *Daniel Alfaro*

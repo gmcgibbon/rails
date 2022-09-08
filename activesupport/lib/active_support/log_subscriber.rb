@@ -64,8 +64,10 @@ module ActiveSupport
   # (via <tt>action_dispatch.callback</tt> notification) in a Rails environment.
   class LogSubscriber < Subscriber
     # Embed in a String to clear all previous ANSI sequences.
-    CLEAR   = "\e[0m"
-    BOLD    = "\e[1m"
+    CLEAR     = "\e[0m"
+    BOLD      = "\e[1m"
+    ITALIC    = "\e[3m"
+    UNDERLINE = "\e[4m"
 
     # Colors
     BLACK   = "\e[30m"
@@ -128,15 +130,27 @@ module ActiveSupport
       METHOD
     end
 
-    # Set color by using a symbol or one of the defined constants. If a third
-    # option is set to +true+, it also adds bold to the string. This is based
-    # on the Highline implementation and will automatically append CLEAR to the
-    # end of the returned String.
-    def color(text, color, bold = false) # :doc:
+    # Set color by using a symbol or one of the defined constants. Set modes
+    # by specifying bold, italic, or underline options. Inspired by Highline,
+    # this method will automatically clear formatting at the end of the returned String.
+    def color(text, color, mode_options = {}) # :doc:
       return text unless colorize_logging
       color = self.class.const_get(color.upcase) if color.is_a?(Symbol)
-      bold  = bold ? BOLD : ""
-      "#{bold}#{color}#{text}#{CLEAR}"
+      mode = mode_from(mode_options)
+      "#{mode}#{color}#{text}#{CLEAR}"
+    end
+
+    def mode_from(options)
+      if options.is_a?(Boolean)
+        Activesupport::Deprecation.warn()
+        options = { bold: options }
+      end
+
+      +"".tap do |mode|
+        mode << BOLD if options[:bold]
+        mode << ITALIC if options[:italic]
+        mode << UNDERLINE if options[:underline]
+      end
     end
 
     def log_exception(name, e)
