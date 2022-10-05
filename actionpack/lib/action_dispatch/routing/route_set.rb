@@ -97,6 +97,8 @@ module ActionDispatch
           @routes.clear
           @path_helpers.clear
           @url_helpers.clear
+          @append.clear
+          @prepend.clear
         end
 
         def add(name, route)
@@ -406,7 +408,10 @@ module ActionDispatch
       private :make_request
 
       def draw(&block)
-        clear! unless @disable_clear_and_finalize
+        unless @disable_clear_and_finalize
+          @prepend.each { |blk| eval_block(blk) }
+          clear!
+        end
         eval_block(block)
         finalize! unless @disable_clear_and_finalize
         nil
@@ -442,7 +447,6 @@ module ActionDispatch
         set.clear
         formatter.clear
         @polymorphic_mappings.clear
-        @prepend.each { |blk| eval_block(blk) }
       end
 
       module MountedHelpers
