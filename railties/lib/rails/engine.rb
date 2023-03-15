@@ -600,14 +600,6 @@ module Rails
       config.i18n.railties_load_path << paths["config/locales"]
     end
 
-    initializer :add_view_paths do
-      views = paths["app/views"].existent
-      unless views.empty?
-        ActiveSupport.on_load(:action_controller) { prepend_view_path(views) if respond_to?(:prepend_view_path) }
-        ActiveSupport.on_load(:action_mailer) { prepend_view_path(views) }
-      end
-    end
-
     initializer :add_mailer_preview_paths do
       previews = paths["test/mailers/previews"].existent
       unless previews.empty?
