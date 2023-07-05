@@ -115,7 +115,7 @@ module ActiveRecord
           inverse = source_reflection.inverse_of
           target = through_association.target
 
-          if inverse && target && !target.is_a?(Array)
+          if source_reflection.collection? && inverse && target && !target.is_a?(Array)
             attributes[inverse.foreign_key] = target.id
           end
 
