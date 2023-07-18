@@ -1011,7 +1011,7 @@ class BasicsTest < ActiveRecord::TestCase
     new_book = book.dup
 
     assert_equal "The first book", new_book.title
-    assert_equal([nil, nil], new_book.id)
+    assert_equal([book.author_id, nil], new_book.id)
   end
 
   DeveloperSalary = Struct.new(:amount)

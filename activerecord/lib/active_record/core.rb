@@ -509,7 +509,13 @@ module ActiveRecord
     def initialize_dup(other) # :nodoc:
       @attributes = @attributes.deep_dup
       if self.class.composite_primary_key?
-        @primary_key.each { |key| @attributes.reset(key) }
+        foreign_keys = _reflections.values.filter_map do |reflection|
+          reflection.belongs_to? && reflection.foreign_key
+        end
+
+        @primary_key.each do |key|
+          @attributes.reset(key) unless key.to_s.in?(foreign_keys)
+        end
       else
         @attributes.reset(@primary_key)
       end
