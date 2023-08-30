@@ -163,6 +163,19 @@ _SQL
     t.unique_key :position_3, name: "test_unique_keys_position_deferrable_deferred", deferrable: :deferred
   end
 
+  create_table :cpk_uuid_posts, primary_key: [:blog_uuid, :uuid], force: true do |t|
+    t.uuid :blog_uuid
+    t.uuid :uuid, default: proc { "uuid_generate_v4()" }
+    t.string :title
+  end
+
+  create_table :cpk_uuid_comments, primary_key: [:blog_uuid, :uuid], force: true do |t|
+    t.uuid :blog_uuid
+    t.uuid :uuid, default: proc { "uuid_generate_v4()" }
+    t.uuid :post_uuid
+    t.text :content
+  end
+
   if supports_partitioned_indexes?
     create_table(:measurements, id: false, force: true, options: "PARTITION BY LIST (city_id)") do |t|
       t.string :city_id, null: false

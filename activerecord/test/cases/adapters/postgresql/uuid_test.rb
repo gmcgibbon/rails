@@ -474,3 +474,57 @@ class PostgresqlUUIDHasManyThroughDisableJoinsTest < ActiveRecord::PostgreSQLTes
       [uuid_comment_1_1.id, uuid_comment_1_2.id, uuid_comment_2_1.id, uuid_comment_2_2.id, uuid_comment_2_3.id].sort
   end
 end
+
+class PostgresqlUUIDCompositePrimaryKeyTest < ActiveRecord::PostgreSQLTestCase
+  class Comment < ActiveRecord::Base
+    self.table_name = :cpk_uuid_comments
+
+    belongs_to :post, query_constraints: [:blog_uuid, :post_uuid]
+  end
+
+  class Post < ActiveRecord::Base
+    self.table_name = :cpk_uuid_posts
+    has_many :comments, query_constraints: [:blog_uuid, :post_uuid]
+    has_one :comment, query_constraints: [:blog_uuid, :post_uuid]
+  end
+
+  setup do
+    @blog_uuid = SecureRandom.uuid
+  end
+
+  test "find" do
+    comment = Comment.create!(blog_uuid: @blog_uuid)
+
+    assert_equal comment, Comment.find(comment.id)
+  end
+
+  test "has_many" do
+    post = Post.create!(blog_uuid: @blog_uuid, title: "Hello World")
+    comment = post.comments.create!(blog_uuid: @blog_uuid, content: "Testing")
+
+    assert_equal(post.blog_uuid, comment.blog_uuid)
+    assert_equal(post.uuid, comment.post_uuid)
+  end
+
+  test "has_one" do
+    post = Post.create!(blog_uuid: @blog_uuid, title: "Hello World")
+    comment = post.create_comment!(blog_uuid: @blog_uuid, content: "Testing")
+
+    assert_equal(post.blog_uuid, comment.blog_uuid)
+    assert_equal(post.uuid, comment.post_uuid)
+  end
+
+  test "belongs_to" do
+    comment = Comment.create!(blog_uuid: @blog_uuid, content: "Testing")
+    post = comment.create_post!(blog_uuid: @blog_uuid, title: "Hello World")
+
+    assert_equal(post.blog_uuid, comment.blog_uuid)
+    assert_equal(post.uuid, comment.post_uuid)
+  end
+
+  test "to_param" do
+    comment = Comment.create!(blog_uuid: @blog_uuid, content: "Testing")
+
+    assert_equal(comment.id, comment.to_param.split(Comment.param_delimiter))
+  end
+end
