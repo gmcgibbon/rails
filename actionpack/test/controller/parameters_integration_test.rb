@@ -14,6 +14,10 @@ class IntegrationController < ActionController::Base
 
     render plain: "Home"
   end
+
+  def extract_params
+    render json: params.extract_value(:id, delimiter: "_")
+  end
 end
 
 class ActionControllerParametersIntegrationTest < ActionController::TestCase
@@ -47,5 +51,12 @@ permitted: false
       post :permit_params, params: params
     end
     assert_response :ok
+  end
+
+  test "composite key id parameters can be parsed" do
+    id = ["1", "2"]
+    post :extract_params, params: { id: id.join("_") }
+
+    assert_equal(id.to_json, response.body)
   end
 end
