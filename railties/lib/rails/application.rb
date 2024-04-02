@@ -587,6 +587,10 @@ module Rails
 
         require_environment!
       end
+
+      task environment_with_routes: :environment do
+        routes_reloader.execute unless routes_reloader.eager_load
+      end
     end
 
     def run_generators_blocks(app) # :nodoc:

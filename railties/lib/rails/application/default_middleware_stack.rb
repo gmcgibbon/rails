@@ -63,6 +63,7 @@ module Rails
           end
 
           if config.reloading_enabled?
+            middleware.use ::ActionDispatch::Once, proc { app.routes_reloader.execute } unless app.routes_reloader.eager_load
             middleware.use ::ActionDispatch::Reloader, app.reloader
           end
 

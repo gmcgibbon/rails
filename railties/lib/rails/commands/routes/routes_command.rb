@@ -23,6 +23,7 @@ module Rails
       desc "routes", "List all the defined routes"
       def perform(*)
         boot_application!
+        Rails.application.routes_reloader.execute unless Rails.application.routes_reloader.eager_load
         require "action_dispatch/routing/inspector"
 
         say inspector.format(formatter, routes_filter)

@@ -71,5 +71,9 @@ module ActionDispatch
 
       ActionDispatch.test_app = app
     end
+
+    server do
+      ActionDispatch::Routing::Mapper.route_source_locations = false
+    end
   end
 end
