@@ -71,6 +71,7 @@ module ActionDispatch
     autoload :DebugView
     autoload :ExceptionWrapper
     autoload :Executor
+    autoload :Once
     autoload :Flash
     autoload :PublicExceptions
     autoload :Reloader

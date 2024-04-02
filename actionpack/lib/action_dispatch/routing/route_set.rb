@@ -345,9 +345,7 @@ module ActionDispatch
         { new: "new", edit: "edit" }
       end
 
-      def self.new_with_config(config)
-        route_set_config = DEFAULT_CONFIG
-
+      def self.new_with_config(config, route_set_config = DEFAULT_CONFIG)
         # engines apparently don't have this set
         if config.respond_to? :relative_url_root
           route_set_config.relative_url_root = config.relative_url_root
