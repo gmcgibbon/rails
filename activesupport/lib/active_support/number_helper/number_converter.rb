@@ -4,7 +4,6 @@ require "bigdecimal"
 require "bigdecimal/util"
 require "active_support/core_ext/big_decimal/conversions"
 require "active_support/core_ext/hash/keys"
-require "active_support/i18n"
 require "active_support/core_ext/class/attribute"
 
 module ActiveSupport

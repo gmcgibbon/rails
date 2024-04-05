@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "concurrent/map"
-require "active_support/i18n"
 
 module ActiveSupport
   module Inflector
@@ -265,8 +264,10 @@ module ActiveSupport
     def inflections(locale = :en)
       if block_given?
         yield Inflections.instance(locale)
-      else
+      elsif Module.const_defined?(:I18n) && !Module.autoload?(:I18n)
         Inflections.instance_or_fallback(locale)
+      else
+        Inflections.instance(locale)
       end
     end
   end
