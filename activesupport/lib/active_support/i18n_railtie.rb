@@ -33,19 +33,17 @@ module I18n
       return if @i18n_inited
 
       fallbacks = app.config.i18n.delete(:fallbacks)
-
-      # Avoid issues with setting the default_locale by disabling available locales
-      # check while configuring.
       enforce_available_locales = app.config.i18n.delete(:enforce_available_locales)
-      enforce_available_locales = I18n.enforce_available_locales if enforce_available_locales.nil?
-      I18n.enforce_available_locales = false
+      I18n.enforce_available_locales = enforce_available_locales
+      I18n.available_locales = app.config.i18n.available_locales
 
+      available_locales_regex = /\/#{Regexp.union(I18n.available_locales.map(&:to_s))}\.yml/
       reloadable_paths = []
       app.config.i18n.each do |setting, value|
         case setting
         when :railties_load_path
           reloadable_paths = value
-          app.config.i18n.load_path.unshift(*value.flat_map(&:existent))
+          app.config.i18n.load_path.unshift(*value.flatten)
         when :load_path
           I18n.load_path += value
         when :raise_on_missing_translations
@@ -55,10 +53,10 @@ module I18n
         end
       end
 
-      init_fallbacks(fallbacks) if fallbacks && validate_fallbacks(fallbacks)
+      I18n.load_path = I18n.load_path.grep(available_locales_regex)
+      reloadable_paths = reloadable_paths.grep(available_locales_regex)
 
-      # Restore available locales check so it will take place from now on.
-      I18n.enforce_available_locales = enforce_available_locales
+      init_fallbacks(fallbacks) if fallbacks && validate_fallbacks(fallbacks)
 
       if app.config.reloading_enabled?
         directories = watched_dirs_with_extensions(reloadable_paths)
