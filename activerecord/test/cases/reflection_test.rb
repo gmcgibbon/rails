@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "active_support/testing/ractors_assertions"
 require "cases/helper"
 require "models/topic"
 require "models/customer"
@@ -38,6 +39,7 @@ require "models/cpk/book"
 
 class ReflectionTest < ActiveRecord::TestCase
   include ActiveRecord::Reflection
+  include ActiveSupport::Testing::RactorsAssertions
 
   fixtures :topics, :customers, :companies, :subscribers, :price_estimates
 
@@ -348,6 +350,44 @@ class ReflectionTest < ActiveRecord::TestCase
 
   def test_reflections_should_return_keys_as_strings
     assert Category.reflections.keys.all?(String), "Model.reflections is expected to return string for keys"
+  end
+
+  if RUBY_VERSION >= "4.0"
+    def test_reflections_added_from_a_non_main_ractor_are_registered_on_the_main_ractor
+      klass = Class.new(ActiveRecord::Base) do
+        self.table_name = "topics"
+      end
+
+      reflection = Ractor.make_shareable(
+        ActiveRecord::Reflection.create(:has_many, :replies, nil, {}, klass)
+      )
+
+      on_ractor(klass, reflection) do |klass, reflection|
+        ActiveRecord::Reflection.add_reflection(klass, :replies, reflection)
+        nil
+      end
+
+      assert_equal [:replies], klass._reflections.keys
+      assert_same reflection, klass._reflections[:replies]
+    end
+
+    def test_aggregate_reflections_added_from_a_non_main_ractor_are_registered_on_the_main_ractor
+      klass = Class.new(ActiveRecord::Base) do
+        self.table_name = "customers"
+      end
+
+      reflection = Ractor.make_shareable(
+        ActiveRecord::Reflection.create(:composed_of, :balance, nil, { class_name: "Money", mapping: { balance: :amount } }, klass)
+      )
+
+      on_ractor(klass, reflection) do |klass, reflection|
+        ActiveRecord::Reflection.add_aggregate_reflection(klass, :balance, reflection)
+        nil
+      end
+
+      assert_equal [:balance], klass.aggregate_reflections.keys
+      assert_same reflection, klass.aggregate_reflections[:balance]
+    end
   end
 
   def test_has_and_belongs_to_many_reflection

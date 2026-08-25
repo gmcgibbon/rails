@@ -7,9 +7,12 @@ module ActiveRecord
   module Reflection # :nodoc:
     extend ActiveSupport::Concern
 
+    EMPTY = {}.freeze
+    private_constant :EMPTY
+
     included do
-      class_attribute :_reflections, instance_writer: false, default: {}
-      class_attribute :aggregate_reflections, instance_writer: false, default: {}
+      class_attribute :_reflections, instance_writer: false, default: EMPTY
+      class_attribute :aggregate_reflections, instance_writer: false, default: EMPTY
       class_attribute :automatic_scope_inversing, instance_writer: false, default: false
       class_attribute :automatically_invert_plural_associations, instance_writer: false, default: false
     end
@@ -21,13 +24,20 @@ module ActiveRecord
       end
 
       def add_reflection(ar, name, reflection)
-        ar.clear_reflections_cache
-        name = name.to_sym
-        ar._reflections = ar._reflections.except(name).merge!(name => reflection)
+        key = name.to_sym
+
+        ActiveSupport::Ractors.on_main(ar) do
+          clear_reflections_cache
+          self._reflections = _reflections.except(key).merge!(key => reflection)
+        end
       end
 
       def add_aggregate_reflection(ar, name, reflection)
-        ar.aggregate_reflections = ar.aggregate_reflections.merge(name.to_sym => reflection)
+        key = name.to_sym
+
+        ActiveSupport::Ractors.on_main(ar) do
+          self.aggregate_reflections = aggregate_reflections.merge(key => reflection)
+        end
       end
 
       private
