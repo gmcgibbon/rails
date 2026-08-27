@@ -8,8 +8,8 @@ module ActiveRecord
     extend ActiveSupport::Concern
 
     included do
-      class_attribute :_reflections, instance_writer: false, default: {}
-      class_attribute :aggregate_reflections, instance_writer: false, default: {}
+      class_attribute :_reflections, instance_writer: false, default: {}.freeze
+      class_attribute :aggregate_reflections, instance_writer: false, default: {}.freeze
       class_attribute :automatic_scope_inversing, instance_writer: false, default: false
       class_attribute :automatically_invert_plural_associations, instance_writer: false, default: false
     end
@@ -21,13 +21,32 @@ module ActiveRecord
       end
 
       def add_reflection(ar, name, reflection)
-        ar.clear_reflections_cache
-        name = name.to_sym
-        ar._reflections = ar._reflections.except(name).merge!(name => reflection)
+        key = name.to_sym
+        value = ActiveSupport::Ractors.try_make_shareable(reflection)
+
+        ActiveSupport::Ractors.on_main(ar) do
+          clear_reflections_cache
+          self._reflections = _reflections.except(key).merge!(key => value).freeze
+        end
+      end
+
+      def update_reflection(ar, name, reflection)
+        key = name.to_sym
+        value = ActiveSupport::Ractors.try_make_shareable(reflection)
+
+        ActiveSupport::Ractors.on_main(ar) do
+          clear_reflections_cache
+          self._reflections = _reflections.merge(key => value).freeze
+        end
       end
 
       def add_aggregate_reflection(ar, name, reflection)
-        ar.aggregate_reflections = ar.aggregate_reflections.merge(name.to_sym => reflection)
+        key = name.to_sym
+        value = ActiveSupport::Ractors.try_make_shareable(reflection)
+
+        ActiveSupport::Ractors.on_main(ar) do
+          self.aggregate_reflections = aggregate_reflections.merge(key => value).freeze
+        end
       end
 
       private
@@ -80,21 +99,23 @@ module ActiveRecord
       end
 
       def normalized_reflections # :nodoc:
-        @__reflections ||= begin
-          ref = {}
+        @__reflections || ActiveSupport::Ractors.on_main(self) do
+          @__reflections ||= begin
+            ref = {}
 
-          _reflections.each do |name, reflection|
-            parent_reflection = reflection.parent_reflection
+            _reflections.each do |name, reflection|
+              parent_reflection = reflection.parent_reflection
 
-            if parent_reflection
-              parent_name = parent_reflection.name
-              ref[parent_name] = parent_reflection
-            else
-              ref[name] = reflection
+              if parent_reflection
+                parent_name = parent_reflection.name
+                ref[parent_name] = parent_reflection
+              else
+                ref[name] = reflection
+              end
             end
-          end
 
-          ref.freeze
+            ref.freeze
+          end
         end
       end
 
@@ -183,14 +204,6 @@ module ActiveRecord
         klass.new(attributes, &block)
       end
 
-      # Returns the class name for the macro.
-      #
-      # <tt>composed_of :balance, class_name: 'Money'</tt> returns <tt>'Money'</tt>
-      # <tt>has_many :clients</tt> returns <tt>'Client'</tt>
-      def class_name
-        @class_name ||= -(options[:class_name] || derive_class_name).to_s
-      end
-
       # Returns a list of scopes that should be applied for this Reflection
       # object when querying the database.
       def scopes
@@ -245,23 +258,30 @@ module ActiveRecord
       end
 
       def counter_cache_column
-        @counter_cache_column ||= begin
+        @counter_cache_column || begin
           counter_cache = options[:counter_cache]
 
-          if belongs_to?
+          value = if belongs_to?
             if counter_cache
               counter_cache[:column] || -"#{active_record.name.demodulize.underscore.pluralize}_count"
             end
           else
             -((counter_cache && counter_cache[:column]) || "#{name}_count")
           end
+
+          @counter_cache_column = value unless frozen?
+          value
         end
       end
 
       def inverse_of
         return unless inverse_name
 
-        @inverse_of ||= klass._reflect_on_association inverse_name
+        @inverse_of || begin
+          value = klass._reflect_on_association inverse_name
+          @inverse_of = value unless frozen?
+          value
+        end
       end
 
       def check_validity_of_inverse!
@@ -286,16 +306,21 @@ module ActiveRecord
       #
       # Hence this method.
       def inverse_which_updates_counter_cache
-        unless @inverse_which_updates_counter_cache_defined
-          if counter_cache_column
-            inverse_candidates = inverse_of ? [inverse_of] : klass.reflect_on_all_associations(:belongs_to)
-            @inverse_which_updates_counter_cache = inverse_candidates.find do |inverse|
-              inverse.counter_cache_column == counter_cache_column && (inverse.polymorphic? || inverse.klass == active_record)
-            end
+        return @inverse_which_updates_counter_cache if @inverse_which_updates_counter_cache_defined
+
+        value = if counter_cache_column
+          inverse_candidates = inverse_of ? [inverse_of] : klass.reflect_on_all_associations(:belongs_to)
+          inverse_candidates.find do |inverse|
+            inverse.counter_cache_column == counter_cache_column && (inverse.polymorphic? || inverse.klass == active_record)
           end
+        end
+
+        unless frozen?
+          @inverse_which_updates_counter_cache = value
           @inverse_which_updates_counter_cache_defined = true
         end
-        @inverse_which_updates_counter_cache
+
+        value
       end
       alias inverse_updates_counter_cache? inverse_which_updates_counter_cache
 
@@ -388,6 +413,12 @@ module ActiveRecord
 
       attr_reader :plural_name # :nodoc:
 
+      # Returns the class name for the macro.
+      #
+      # <tt>composed_of :balance, class_name: 'Money'</tt> returns <tt>'Money'</tt>
+      # <tt>has_many :clients</tt> returns <tt>'Client'</tt>
+      attr_reader :class_name
+
       def initialize(name, scope, options, active_record)
         super()
         @name          = name
@@ -397,14 +428,7 @@ module ActiveRecord
         @klass         = options[:anonymous_class]
         @plural_name   = active_record.pluralize_table_names ?
                             name.to_s.pluralize.dedup : name.to_s.dedup
-      end
-
-      def autosave=(autosave)
-        @options[:autosave] = autosave
-        parent_reflection = self.parent_reflection
-        if parent_reflection
-          parent_reflection.autosave = autosave
-        end
+        @class_name    = -(options[:class_name] || derive_class_name).to_s
       end
 
       # Returns the class for the macro.
@@ -423,7 +447,11 @@ module ActiveRecord
       # a new association object. Use +build_association+ or +create_association+
       # instead. This allows plugins to hook into association object creation.
       def klass
-        @klass ||= _klass(class_name)
+        @klass || ActiveSupport::Ractors.on_main(self) do
+          value = _klass(class_name)
+          @klass = value unless frozen?
+          value
+        end
       end
 
       def _klass(class_name) # :nodoc:
@@ -530,10 +558,7 @@ module ActiveRecord
         @validated = false
         @type = -(options[:foreign_type]&.to_s || "#{options[:as]}_type") if options[:as]
         @foreign_type = -(options[:foreign_type]&.to_s || "#{name}_type") if options[:polymorphic]
-        @join_table = nil
-        @foreign_key = nil
         @association_foreign_key = nil
-        @association_primary_key = nil
         @extensions = options[:extend] ? Array(options[:extend]) : FROZEN_EMPTY_ARRAY
         @extensions = @extensions.dup.freeze unless @extensions.frozen?
 
@@ -549,9 +574,35 @@ module ActiveRecord
           options[:query_constraints] = options.delete(:foreign_key)
         end
 
+        # Eagerly resolve the keys provided as options. Only derived values
+        # that need the schema or the associated class remain lazy. The
+        # `:primary_key` option feeds both #active_record_primary_key and
+        # BelongsToReflection#association_primary_key.
+        @join_table = options[:join_table] && -options[:join_table].to_s
+        @active_record_primary_key = @association_primary_key =
+          options[:primary_key] && ActiveRecord::Key.for(options[:primary_key]).name
+        @foreign_key = if options[:foreign_key]
+          ActiveRecord::Key.for(options[:foreign_key]).name
+        elsif options[:query_constraints]
+          options[:query_constraints].map { |fk| -fk.to_s.freeze }.freeze
+        end
+
         @deprecated = !!options[:deprecated]
 
         ensure_option_not_given_as_class!(:class_name)
+      end
+
+      # Returns a mutable copy of this reflection with the +:autosave+ option
+      # set, for re-registration. Registered reflections are frozen, so
+      # enabling autosave after the fact (for example, from
+      # +accepts_nested_attributes_for+) replaces the registered reflection.
+      def with_autosave(autosave) # :nodoc:
+        copy = dup
+        copy.instance_variable_set(:@options, options.merge(autosave: autosave))
+        if parent_reflection
+          copy.parent_reflection = parent_reflection.with_autosave(autosave)
+        end
+        copy
       end
 
       def association_scope_cache(klass, owner, &block)
@@ -565,27 +616,33 @@ module ActiveRecord
       end
 
       def join_table
-        @join_table ||= -(options[:join_table]&.to_s || derive_join_table)
+        @join_table || begin
+          value = -derive_join_table
+          @join_table = value unless frozen?
+          value
+        end
       end
 
       def foreign_key(infer_from_inverse_of: true)
-        @foreign_key ||= if options[:foreign_key]
-          ActiveRecord::Key.for(options[:foreign_key]).name
-        elsif options[:query_constraints]
-          options[:query_constraints].map { |fk| -fk.to_s.freeze }.freeze
-        else
+        @foreign_key || ActiveSupport::Ractors.on_main(self) do
           derived_fk = derive_foreign_key(infer_from_inverse_of: infer_from_inverse_of)
 
           if !derived_fk.is_a?(Array) && active_record.has_query_constraints?
             derived_fk = derive_fk_query_constraints(derived_fk)
           end
 
-          ActiveRecord::Key.for(derived_fk).name
+          value = ActiveRecord::Key.for(derived_fk).name
+          @foreign_key = value unless frozen?
+          value
         end
       end
 
       def association_foreign_key
-        @association_foreign_key ||= ActiveRecord::Key.for(options[:association_foreign_key] || class_name.foreign_key).name
+        @association_foreign_key || begin
+          value = ActiveRecord::Key.for(options[:association_foreign_key] || class_name.foreign_key).name
+          @association_foreign_key = value unless frozen?
+          value
+        end
       end
 
       def association_primary_key(klass = nil)
@@ -593,12 +650,11 @@ module ActiveRecord
       end
 
       def active_record_primary_key
-        @active_record_primary_key ||=
-          if options[:primary_key]
-            ActiveRecord::Key.for(options[:primary_key]).name
-          else
-            derive_primary_key(active_record) { |model| model.query_constraints_list }
-          end
+        @active_record_primary_key || ActiveSupport::Ractors.on_main(self) do
+          value = derive_primary_key(active_record) { |model| model.query_constraints_list }
+          @active_record_primary_key = value unless frozen?
+          value
+        end
       end
 
       def join_primary_key(klass = nil)
@@ -616,17 +672,19 @@ module ActiveRecord
       def check_validity!
         return if @validated
 
-        check_validity_of_inverse!
+        ActiveSupport::Ractors.on_main(self) do
+          check_validity_of_inverse!
 
-        if !polymorphic? && (klass.composite_primary_key? || active_record.composite_primary_key?)
-          if (has_one? || collection?) && Array(active_record_primary_key).length != Array(foreign_key).length
-            raise CompositePrimaryKeyMismatchError.new(self)
-          elsif belongs_to? && Array(association_primary_key).length != Array(foreign_key).length
-            raise CompositePrimaryKeyMismatchError.new(self)
+          if !polymorphic? && (klass.composite_primary_key? || active_record.composite_primary_key?)
+            if (has_one? || collection?) && Array(active_record_primary_key).length != Array(foreign_key).length
+              raise CompositePrimaryKeyMismatchError.new(self)
+            elsif belongs_to? && Array(association_primary_key).length != Array(foreign_key).length
+              raise CompositePrimaryKeyMismatchError.new(self)
+            end
           end
-        end
 
-        @validated = true
+          @validated = true unless frozen?
+        end
       end
 
       def check_eager_loadable!
@@ -749,11 +807,11 @@ module ActiveRecord
         # If it cannot find a suitable inverse association name, it returns
         # +nil+.
         def inverse_name
-          unless defined?(@inverse_name)
-            @inverse_name = options.fetch(:inverse_of) { automatic_inverse_of }
-          end
+          return @inverse_name if defined?(@inverse_name)
 
-          @inverse_name
+          value = options.fetch(:inverse_of) { automatic_inverse_of }
+          @inverse_name = value unless frozen?
+          value
         end
 
         # returns either +nil+ or the inverse association name that it finds.
@@ -940,9 +998,7 @@ module ActiveRecord
 
       # klass option is necessary to support loading polymorphic associations
       def association_primary_key(klass = nil)
-        if options[:primary_key]
-          return @association_primary_key ||= ActiveRecord::Key.for(options[:primary_key]).name
-        end
+        return @association_primary_key if options[:primary_key]
 
         if polymorphic? && options[:inverse_of] && klass
           inverse = klass.reflect_on_association(options[:inverse_of])
@@ -1003,12 +1059,30 @@ module ActiveRecord
         ensure_option_not_given_as_class!(:source_type)
       end
 
+      def with_autosave(autosave) # :nodoc:
+        ThroughReflection.new(delegate_reflection.with_autosave(autosave))
+      end
+
       def through_reflection?
         true
       end
 
       def klass
-        @klass ||= delegate_reflection._klass(class_name)
+        @klass || ActiveSupport::Ractors.on_main(self) do
+          value = delegate_reflection._klass(class_name)
+          @klass = value unless frozen?
+          value
+        end
+      end
+
+      # Returns the class name for the macro, derived from the source
+      # reflection unless a +:source_type+ option is given.
+      def class_name
+        @class_name || begin
+          value = -(options[:class_name] || derive_class_name).to_s
+          @class_name = value unless frozen?
+          value
+        end
       end
 
       # Returns the source of the through reflection. It checks both a singularized
@@ -1105,7 +1179,11 @@ module ActiveRecord
         # Get the "actual" source reflection if the immediate source reflection has a
         # source reflection itself
         if primary_key = actual_source_reflection.options[:primary_key]
-          @association_primary_key ||= ActiveRecord::Key.for(primary_key).name
+          @association_primary_key || begin
+            value = ActiveRecord::Key.for(primary_key).name
+            @association_primary_key = value unless frozen?
+            value
+          end
         else
           primary_key(klass || self.klass)
         end
@@ -1131,7 +1209,7 @@ module ActiveRecord
       end
 
       def source_reflection_name # :nodoc:
-        @source_reflection_name ||= begin
+        @source_reflection_name || begin
           names = [name.to_s.singularize, name].collect(&:to_sym).uniq
           names = names.find_all { |n|
             through_reflection.klass._reflect_on_association(n)
@@ -1146,7 +1224,10 @@ module ActiveRecord
               source_reflection_names
             )
           end
-          names.first
+
+          value = names.first
+          @source_reflection_name = value unless frozen?
+          value
         end
       end
 
@@ -1191,7 +1272,7 @@ module ActiveRecord
 
         check_validity_of_inverse!
 
-        @validated = true
+        @validated = true unless frozen?
       end
 
       def constraints
@@ -1213,7 +1294,11 @@ module ActiveRecord
       end
 
       def deprecated_nested_reflections
-        @deprecated_nested_reflections ||= collect_deprecated_nested_reflections
+        @deprecated_nested_reflections || begin
+          value = collect_deprecated_nested_reflections
+          @deprecated_nested_reflections = value unless frozen?
+          value
+        end
       end
 
       protected

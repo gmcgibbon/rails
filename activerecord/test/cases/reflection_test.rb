@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 require "cases/helper"
+require "active_support/testing/ractors_assertions"
 require "models/topic"
+require "models/reply"
 require "models/customer"
 require "models/comment"
 require "models/company"
@@ -822,4 +824,47 @@ class DeprecatedReflectionsTest < ActiveRecord::TestCase
     def assert_deprecated_reflection(model, name)
       assert_predicate model.reflect_on_association(name), :deprecated?
     end
+end
+
+if RUBY_VERSION >= "4.0"
+  class ReflectionRactorTest < ActiveRecord::TestCase
+    include ActiveSupport::Testing::RactorsAssertions
+
+    def test_reflections_are_accessable_from_non_main_ractor
+      klass = Class.new(ActiveRecord::Base) do
+        self.table_name = "topics"
+        has_many :replies
+      end
+
+      ActiveRecord::Reflection.update_reflection(
+        klass, :replies, Ractor.make_shareable(klass._reflect_on_association(:replies))
+      )
+
+      reflection = on_ractor(klass) do |klass|
+        klass.reflect_on_association(:replies)
+        klass._reflect_on_association(:replies)
+      end
+
+      assert_equal :has_many, reflection.macro
+      assert_equal :replies, reflection.name
+    end
+
+    def test_aggregate_reflections_are_accessable_from_non_main_ractor
+      klass = Class.new(ActiveRecord::Base) do
+        self.table_name = "customers"
+        composed_of :balance, class_name: "Money", mapping: { balance: :amount }
+      end
+
+      ActiveRecord::Reflection.add_aggregate_reflection(
+        klass, :balance, Ractor.make_shareable(klass.reflect_on_aggregation(:balance))
+      )
+
+      reflection = on_ractor(klass) do |klass|
+        klass.reflect_on_aggregation(:balance)
+      end
+
+      assert_kind_of ActiveRecord::Reflection::AggregateReflection, reflection
+      assert_equal :balance, reflection.name
+    end
+  end
 end
